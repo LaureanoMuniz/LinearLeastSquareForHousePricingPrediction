@@ -1,48 +1,32 @@
-import metnum
+from experiments.nombres import PRECIO
+from experiments.parser import embellish
+import build.metnum as metnum
 import pandas as pd
 import numpy as np
-
-import seaborn as sns
+# import seaborn as sns
 import matplotlib.pyplot as plt
-# plt.use('TkAgg')
 
-from sklearn.linear_model import LinearRegression
+import experiments.filter as filter
+import experiments.geo as geo
 
-df = pd.read_csv('../data/train.csv')
+import experiments.experimento1
+from experiments.precio_m2 import precio_m2
 
-# print(df)
+import experiments.nombres as nombres
 
-x = df['metroscubiertos'].values
-y = df['precio'].values
+# from sklearn.linear_model import LinearRegression
 
-linear_regressor = LinearRegression()
-#linear_regressor = metnum.LinearRegression()
+df = pd.read_csv('data/train.csv')
+df = df.sample(frac=1)
+df = filter.filter(df)
+df[nombres.ONE] = 1
+print(df[PRECIO].max())
+df = precio_m2(df)
+df = embellish(df)
+experiments.experimento1.experimento1(df, True)
 
-# linear_regressor.fit(x, y)
-
-conlatitud = df[df['lat'].notnull()]
-conlatitud = conlatitud[conlatitud['lat'] != 0.0]
-conlatitud.info()
-ciudades = conlatitud['ciudad'].value_counts(sort=True)[:10].index.tolist()
-print(type(ciudades))
+ciudades = df['ciudad'].value_counts(sort=True)[:10].index.tolist()
 print(ciudades)
-
-
-from math import cos, asin, sqrt, pi, radians
-
-
-def distance(lat1, lon1, lat2, lon2):
-    p = pi/180
-    a = 0.5 - cos((lat2-lat1)*p)/2 + cos(lat1*p) * cos(lat2*p) * (1-cos((lon2-lon1)*p))/2
-
-    if a < 0:
-        a = 0
-    if sqrt(a) > 1 or sqrt(a) < 0:
-        print(a)
-
-    a = min(1, sqrt(a))
-    a = max(0, a)
-    return 12742 * asin(a)
 
 
 def distancias_ciudades(conlatitud):
@@ -64,7 +48,11 @@ def distancias_ciudades(conlatitud):
         tmp_j = 0
         for i in range(len(latitudes_tmp)):
             for j in range(i):
-                actual = distance(latitudes_tmp[i],longitudes_tmp[i],latitudes_tmp[j],longitudes_tmp[j])
+                actual = geo.distance(
+                    latitudes_tmp[i],
+                    longitudes_tmp[i],
+                    latitudes_tmp[j],
+                    longitudes_tmp[j])
                 if maximadist < actual:
                     maximadist = actual
                     tmp_i = i
@@ -72,7 +60,11 @@ def distancias_ciudades(conlatitud):
 
         maximas_distancias_por_ciudad.append(maximadist)
         print(tmp_i, tmp_j)
-        print(latitudes_tmp[tmp_i],longitudes_tmp[tmp_i],latitudes_tmp[tmp_j],longitudes_tmp[tmp_j])
+        print(
+            latitudes_tmp[tmp_i],
+            longitudes_tmp[tmp_i],
+            latitudes_tmp[tmp_j],
+            longitudes_tmp[tmp_j])
 
     print(maximas_distancias_por_ciudad)
     maximas_distancias_por_ciudad.sort()
@@ -82,10 +74,10 @@ def distancias_ciudades(conlatitud):
 def latlong():
     for ciudad in ['Coyoacán']:
         print(ciudad)
-        tmp = conlatitud
+        tmp = df
         # tmp = conlatitud[conlatitud['ciudad'] == ciudad].dropna()
         tmp = tmp[tmp['tipodepropiedad'] == 'Casa'].dropna()
-        # tmp = conlatitud[conlatitud['tipodepropiedad'] == 'Apartamento'].dropna()
+# tmp = conlatitud[conlatitud['tipodepropiedad'] == 'Apartamento'].dropna()
         tmp = tmp[tmp['lat'] != 0.0]  # Saco los que no sirven
 
         # latmin = -100.1422
@@ -112,11 +104,11 @@ def latlong():
         tmp = tmp[lngmin < tmp['lat']].dropna()
         tmp = tmp[tmp['lat'] < lngmax].dropna()
 
-        #print(len(tmp))
+        # print(len(tmp))
 
-        #print(tmp.to_numpy().shape)
+        # print(tmp.to_numpy().shape)
 
-        linear_regressor = LinearRegression()
+        linear_regressor = metnum.LinearRegression()
         tmp['lng2'] = tmp['lng'] ** 2
         # tmp['latlng'] = tmp['lat'] * tmp['lng']
         tmp['lat2'] = tmp['lat'] ** 2
