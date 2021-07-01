@@ -2,6 +2,8 @@ from dataclasses import dataclass
 from experiments.nombres import LATITUD,LONGITUD,TIPO_DE_PROPIEDAD,ONE
 import experiments.filter as filter
 import experiments.geo as geo
+import experiments.kfold as kfold
+import experiments.métricas as metricas
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -55,9 +57,7 @@ def matriz_de_gaussianas_aplicadas(df,Gaussianas):
 def plot_mapita(predictor,Gaussianas,distx,disty,df):
 		Xs = np.linspace(0,distx, 100)
 		Ys = np.linspace(0,disty, 100)
-		print(Xs)
-		print(Ys)
-
+		
 		grid = np.meshgrid(Xs, Ys)[0]
         # print(grid[0].shape)
 
@@ -134,35 +134,36 @@ def para_ciudad(ciudad, df):
 	
 	Gaussianas = init_gaussianas(distx,disty)
 
-	df[ONE] = 1
 	df = filter.filter_city(df, ciudad)
 	df = df[[LATITUD,LONGITUD,TIPO_DE_PROPIEDAD,ONE]]
 	df = turn_lat_long_into_XY(df,ciudad)
 	df = turn_propiedad_into_bin(df)
 
-	n = len(df)
-	train = df[:n*8//10]
-	test = df[n*8//10:]
+	for train, test in kfold.kfold(df):
+		one_reshaped_train = np.reshape(train[ONE].to_numpy(), newshape = (len(train),1))
+		one_reshaped_test = np.reshape(test[ONE].to_numpy(), newshape = (len(test),1))	
+		mean_squares_train = np.concatenate((matriz_de_gaussianas_aplicadas(train,Gaussianas),one_reshaped_train),axis=1)
+		mean_squares_test = np.concatenate((matriz_de_gaussianas_aplicadas(test,Gaussianas),one_reshaped_test),axis=1)
 
-	one_reshaped_train = np.reshape(train[ONE].to_numpy(), newshape = (len(train),1))
-	one_reshaped_test = np.reshape(test[ONE].to_numpy(), newshape = (len(test),1))	
-	mean_squares_train = np.concatenate((matriz_de_gaussianas_aplicadas(train,Gaussianas),one_reshaped_train),axis=1)
-	mean_squares_test = np.concatenate((matriz_de_gaussianas_aplicadas(test,Gaussianas),one_reshaped_test),axis=1)
+		regressor = metnum.LinearRegression()
+		regressor.fit(mean_squares_train,train['propiedadbin'])
+		predicted = regressor.predict(mean_squares_test)
+		plot_mapita(regressor,Gaussianas,distx,disty,df)
+		
+		##Todo esto deberian ser funciones en experiments.metricas?
+		#mean_predictor = np.full(len(test),np.mean(test['propiedadbin'].to_numpy()))
+		#error = predicted - test['propiedadbin'].to_numpy()
+		#error_de_la_media = mean_predictor - test['propiedadbin'].to_numpy()
+		#error = math.sqrt((error**2).sum() / len(test))
+		#error_de_la_media = math.sqrt((error_de_la_media**2).sum() / len(test)) 
+		#print(1 - (error / error_de_la_media))
 
-	regressor = metnum.LinearRegression()
-	regressor.fit(mean_squares_train,train['propiedadbin'])
-	predicted = regressor.predict(mean_squares_test)
-	print(predicted)
-	plot_mapita(regressor,Gaussianas,distx,disty,df)
-
-	##Todo esto deberian ser funciones en experiments.metricas?
-	mean_predictor = np.full(len(test),np.mean(test['propiedadbin'].to_numpy()))
-	error = predicted - test['propiedadbin'].to_numpy()
-	error_de_la_media = mean_predictor - test['propiedadbin'].to_numpy()
-	error = math.sqrt((error**2).sum() / len(test))
-	error_de_la_media = math.sqrt((error_de_la_media**2).sum() / len(test)) 
-	print(1 - (error / error_de_la_media))
-
+		print('rmse')
+		print(metricas.rmse(test['propiedadbin'],predicted))
+		print('rmsle')
+		print(metricas.rmsle(test['propiedadbin'],predicted))
+		print('r2')
+		print(metricas.r2(test['propiedadbin'],predicted))
 
 
 
