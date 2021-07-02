@@ -15,13 +15,13 @@ import math
 import sklearn.linear_model as metnum
 
 
-def init_gaussianas(distx,disty):
+def init_gaussianas(distx,disty,times = 1):
 	tamano_x_cuadrado = distx/cantidad_Gaussianas
 	tamano_y_cuadrado = disty/cantidad_Gaussianas
 
 	Gaussianas = []
-	sigma_x = distx/(2*cantidad_Gaussianas * math.sqrt(-ln_un_medio))
-	sigma_y = disty/(2*cantidad_Gaussianas * math.sqrt(-ln_un_medio))
+	sigma_x = distx/(2*cantidad_Gaussianas * math.sqrt(-ln_un_medio)) * times
+	sigma_y = disty/(2*cantidad_Gaussianas * math.sqrt(-ln_un_medio)) * times
 
 
 	for i in range(cantidad_Gaussianas):
@@ -75,7 +75,8 @@ def plot_mapita(predictor,Gaussianas,distx,disty,df):
 				grid[i][j] = res
 
 		plt.figure()
-		plt.contourf(Xs, Ys, grid, levels = np.linspace(0,1,1000))
+		#plt.contourf(Xs, Ys, grid, levels = np.linspace(0,1,1000))
+		plt.contourf(Xs, Ys, grid, levels =[0,0.49999,0.500001,1])
 		#plt.scatter(df['Y'], df['X'], c=df['propiedadbin'])
 		plt.show()	
 
@@ -132,12 +133,17 @@ def para_ciudad(ciudad, df):
 	disty = geo.distance(ciudad.lat_lo,ciudad.lng_lo,ciudad.lat_lo,ciudad.lng_hi)
 	#nos movemos en el plano [0,distx]; [0,dist_y]. No estoy seguro si hacia falta
 	
-	Gaussianas = init_gaussianas(distx,disty)
+	Gaussianas = init_gaussianas(distx,disty,3)
 
 	df = filter.filter_city(df, ciudad)
 	df = df[[LATITUD,LONGITUD,TIPO_DE_PROPIEDAD,ONE]]
 	df = turn_lat_long_into_XY(df,ciudad)
 	df = turn_propiedad_into_bin(df)
+
+	rmses = []
+	rmsles = []
+	r2s = []
+	precisiones = []
 
 	for train, test in kfold.kfold(df):
 		one_reshaped_train = np.reshape(train[ONE].to_numpy(), newshape = (len(train),1))
@@ -147,7 +153,12 @@ def para_ciudad(ciudad, df):
 
 		regressor = metnum.LinearRegression()
 		regressor.fit(mean_squares_train,train['propiedadbin'])
+		print("proporcion de casas")
+		print(np.mean(train['propiedadbin'].to_numpy()))
 		predicted = regressor.predict(mean_squares_test)
+		for i in range(np.shape(predicted)[0]):
+			predicted[i] = max(predicted[i],0)
+			predicted[i] = min(predicted[i],1)
 		plot_mapita(regressor,Gaussianas,distx,disty,df)
 		
 		##Todo esto deberian ser funciones en experiments.metricas?
@@ -158,13 +169,19 @@ def para_ciudad(ciudad, df):
 		#error_de_la_media = math.sqrt((error_de_la_media**2).sum() / len(test)) 
 		#print(1 - (error / error_de_la_media))
 
-		print('rmse')
-		print(metricas.rmse(test['propiedadbin'],predicted))
-		print('rmsle')
-		print(metricas.rmsle(test['propiedadbin'],predicted))
-		print('r2')
-		print(metricas.r2(test['propiedadbin'],predicted))
 
+		rmses.append(metricas.rmse(test['propiedadbin'],predicted))
+		rmsles.append(metricas.rmsle(test['propiedadbin'],predicted))
+		r2s.append(metricas.r2(test['propiedadbin'],predicted))
+		precisiones.append(metricas.precision_casas(test['propiedadbin'].to_numpy(),predicted))
+	print("rmse")
+	print(np.mean(rmses))
+	print("rmsle")
+	print(np.mean(rmsles))
+	print("r cuadrado")
+	print(np.mean(r2s))
+	print("precision")
+	print(np.mean(precisiones))
 
 
 def experimento3(df):

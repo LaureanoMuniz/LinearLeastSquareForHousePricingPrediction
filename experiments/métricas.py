@@ -30,3 +30,13 @@ def r2(actual, predicted):
 def r2_adjusted(actual, predicted, p):
     n = len(actual)
     return 1 - (1 - r2(actual, predicted)) * (n - 1) / (n - p - 1)
+
+def precision_casas(actual, predicted):
+    n = np.shape(actual)[0]
+    out = 0
+    for i in range(n):
+        if(actual[i] <= 0.5 and predicted[i] <= 0.5):
+            out += 1
+        elif(actual[i] >= 0.5 and predicted[i] >= 0.5):
+            out += 1
+    return out/n
