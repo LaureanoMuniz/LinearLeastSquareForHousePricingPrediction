@@ -12,6 +12,7 @@ import pandas as pd
 import experiments.experimento1
 import experiments.experiment5
 import experiments.experiment4
+import experiments.experiment3
 from experiments.precio_m2 import precio_m2
 
 import experiments.nombres as nombres
@@ -28,9 +29,10 @@ df = df.sample(frac=1)
 df[nombres.ONE] = 1
 print(df[PRECIO].max())
 df = precio_m2(df)
-experiments.experiment5.experiment5(df)
+# experiments.experiment5.experiment5(df)
 # experiments.experimento1.experimento1(df, True)
-# experiments.experiment4.experiment4(df)
+# experiments.experiment3.experimento3(df)
+experiments.experiment4.experiment4(df)
 
 # ciudades = df['ciudad'].value_counts(sort=True)[:10].index.tolist()
 # print(ciudades)

@@ -16,7 +16,7 @@ const double eps = 1e-9;
 LinearRegression::LinearRegression() {}
 
 void LinearRegression::fit(Matrix A, Matrix b) {
-    Eigen::JacobiSVD<Matrix> svd(A, Eigen::ComputeFullV | Eigen::ComputeFullU);
+    Eigen::JacobiSVD<Matrix> svd(A, Eigen::ComputeThinV | Eigen::ComputeThinU);
     auto singular_values = svd.singularValues();
     auto V = svd.matrixV();
     auto U = svd.matrixU();
