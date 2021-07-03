@@ -8,7 +8,7 @@ def rmse(actual, predicted):
 def rmsle(actual, predicted):
     return np.sqrt(
         np.mean(
-            (np.log(actual+1)-np.log(predicted+1))**2
+            (np.log(np.max(actual, 0)+1)-np.log(np.max(predicted, 0)+1))**2
         )
     )
 
