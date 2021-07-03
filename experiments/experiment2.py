@@ -17,7 +17,7 @@ def add_knearest(train, test):
                 row[nombres.LATITUD], row[nombres.LONGITUD])
             w = 0 if d < nombres.eps else 1/d
             weight += w
-            suma += w * t[nombres.PRECIO_M2]
+            suma += w * t[nombres.PRECIO]
         # print("row done")
         return suma / weight
     res = test.apply(info, axis=1)
