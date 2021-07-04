@@ -11,6 +11,7 @@ import experiments.filter as filter
 import experiments.geo as geo
 
 import experiments.experimento1
+import experiments.experiment3
 import experiments.experiment5
 import experiments.experiment4
 from experiments.precio_m2 import precio_m2
@@ -45,7 +46,7 @@ class Experimentos:
         experiments.experimento1.experimento1(df, True)
 
     def case_3():
-        return 
+        experiments.experiment3.experimento3(df)
 
     def case_4():
         experiments.experiment4.experiment4(df)
@@ -57,10 +58,11 @@ class Experimentos:
 
 try:
     func = (getattr(Experimentos,'case_' + str(sys.argv[1])))
-    func()
 except:
     print('MODO DE USO: main.py NUMERO_DE_EXPERIMENTO')
+    sys.exit()
 
+func()
 
 
 # experiments.experimento1.experimento1(df, True)
