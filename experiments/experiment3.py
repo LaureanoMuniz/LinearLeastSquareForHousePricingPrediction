@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from experiments.nombres import LATITUD,LONGITUD,TIPO_DE_PROPIEDAD,ONE
 import experiments.filter as filter
 import experiments.geo as geo
-import experiments.kfold as kfold
+from experiments.kfold import kfold
 import experiments.métricas as metricas
 import matplotlib.pyplot as plt
 import numpy as np
@@ -32,7 +32,7 @@ def init_gaussianas(distx,disty,times = 1):
 
 	return Gaussianas
 
-def turn_lat_long_into_XY(df,ciudad):
+def turn_lat_long_into_XY(df,ciudad, distx, disty):
 	def info(row):
 		x = geo.distance(ciudad.lat_lo,ciudad.lng_lo,ciudad.lat_lo,row[LONGITUD])
 		y = geo.distance(ciudad.lat_lo,ciudad.lng_lo,row[LATITUD],ciudad.lng_lo)
@@ -54,7 +54,7 @@ def matriz_de_gaussianas_aplicadas(df,Gaussianas):
 		out[:,i] = funcion.apply_vectorized(df['X'].tolist(),df['Y'].tolist())
 	return out
 
-def plot_mapita(predictor,Gaussianas,distx,disty,df):
+def plot_mapita(predictor,Gaussianas,distx,disty,df,nombreCiudad):
 		Xs = np.linspace(0,distx, 100)
 		Ys = np.linspace(0,disty, 100)
 		
@@ -74,12 +74,25 @@ def plot_mapita(predictor,Gaussianas,distx,disty,df):
 					res = 0
 				grid[i][j] = res
 
-		plt.figure()
-		#plt.contourf(Xs, Ys, grid, levels = np.linspace(0,1,1000))
-		plt.contourf(Xs, Ys, grid, levels =[0,0.49999,0.500001,1])
-		#plt.scatter(df['Y'], df['X'], c=df['propiedadbin'])
-		plt.show()	
+		mapaCiudad = plt.imread(f'data/{nombreCiudad}.png')
+		#BBox = (0,np.shape(Xs)[0],0,np.shape(Ys)[0])
+		BBox = (np.min(Xs), np.max(Xs), np.min(Ys), np.max(Ys))
+		#BBox = (np.min(Ys),np.max(Ys),np.min(Xs),np.max(Xs))
 
+		plt.figure(nombreCiudad)
+		plt.imshow(mapaCiudad, extent=BBox, aspect='equal', alpha=1)
+		plt.contourf(Xs, Ys, grid, levels =[0,0.49999,0.500001,1], alpha = 0.35)
+		plt.xticks([])
+		plt.yticks([])
+		plt.show()
+
+		plt.figure(nombreCiudad)
+		plt.imshow(mapaCiudad, extent=BBox, aspect='equal', alpha=1)
+		plt.contourf(Xs, Ys, grid, levels =[0,0.49999,0.500001,1], alpha = 0.35)
+		plt.scatter(df['X'], df['Y'], c=df['propiedadbin'], s = 3)
+		plt.xticks([])
+		plt.yticks([])
+		plt.show()
 @dataclass
 class Ciudad:
     nombre: str
@@ -119,7 +132,14 @@ ciudades = [
         lat_hi=20.767892,
         lng_lo=-103.496963,
         lng_hi=-103.199645,
-    )
+    ),
+	Ciudad(
+        nombre='Ciudad de México',
+        lat_lo=19.176656,
+        lat_hi=19.706840,
+        lng_lo=-99.383526,
+        lng_hi=-98.780459,
+    ),
 ]
 
 
@@ -129,23 +149,32 @@ cantidad_Gaussianas = 25
 	
 
 def para_ciudad(ciudad, df):
-	distx = geo.distance(ciudad.lat_lo,ciudad.lng_lo,ciudad.lat_hi,ciudad.lng_lo)
-	disty = geo.distance(ciudad.lat_lo,ciudad.lng_lo,ciudad.lat_lo,ciudad.lng_hi)
+	disty = geo.distance(ciudad.lat_lo,ciudad.lng_lo,ciudad.lat_hi,ciudad.lng_lo)
+	distx = geo.distance(ciudad.lat_lo,ciudad.lng_lo,ciudad.lat_lo,ciudad.lng_hi)
 	#nos movemos en el plano [0,distx]; [0,dist_y]. No estoy seguro si hacia falta
 	
 	Gaussianas = init_gaussianas(distx,disty,3)
 
 	df = filter.filter_city(df, ciudad)
-	df = df[[LATITUD,LONGITUD,TIPO_DE_PROPIEDAD,ONE]]
-	df = turn_lat_long_into_XY(df,ciudad)
+	#df = df[[LATITUD,LONGITUD,TIPO_DE_PROPIEDAD,ONE]]
+	df = turn_lat_long_into_XY(df,ciudad,distx, disty)
 	df = turn_propiedad_into_bin(df)
+
+	print(df['X'])
+	print(df['Y'])
 
 	rmses = []
 	rmsles = []
 	r2s = []
 	precisiones = []
-
-	for train, test in kfold.kfold(df):
+	mapita = True
+	
+	print(len(df))
+	
+	for train, test in kfold(df):
+		print(len(df))
+		print(len(train))
+		print(len(test))
 		one_reshaped_train = np.reshape(train[ONE].to_numpy(), newshape = (len(train),1))
 		one_reshaped_test = np.reshape(test[ONE].to_numpy(), newshape = (len(test),1))	
 		mean_squares_train = np.concatenate((matriz_de_gaussianas_aplicadas(train,Gaussianas),one_reshaped_train),axis=1)
@@ -159,8 +188,9 @@ def para_ciudad(ciudad, df):
 		for i in range(np.shape(predicted)[0]):
 			predicted[i] = max(predicted[i],0)
 			predicted[i] = min(predicted[i],1)
-		plot_mapita(regressor,Gaussianas,distx,disty,df)
-		
+		if(mapita):
+			plot_mapita(regressor,Gaussianas,distx,disty,df,ciudad.nombre)
+			mapita = False
 		##Todo esto deberian ser funciones en experiments.metricas?
 		#mean_predictor = np.full(len(test),np.mean(test['propiedadbin'].to_numpy()))
 		#error = predicted - test['propiedadbin'].to_numpy()
