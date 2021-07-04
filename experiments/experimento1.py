@@ -14,7 +14,7 @@ from experiments.kfold import kfold
 from experiments.cities import ciudades
 
 
-def para_ciudad(ciudad, df, tipo, con_knear=False):
+def para_ciudad(ciudad, df, tipo, con_knear):
     df = filter_city(df, ciudad)
     df = df[df[nombres.TIPO_DE_PROPIEDAD] == tipo]
     title = f"KNearest: {con_knear}, {ciudad.nombre}, {tipo}"

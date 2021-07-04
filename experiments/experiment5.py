@@ -8,6 +8,8 @@ from experiments.cities import ciudades
 
 import matplotlib.pyplot as plt
 
+import numpy as np
+
 
 def dado_subconjunto(features, df):
     train, test = split(df)
@@ -51,6 +53,13 @@ def todos_los_subconjuntos(df):
         nombres.GIMNASIO,
         nombres.USOS_MULT,
         nombres.PILETA,
+        nombres.ESCUELAS,
+        nombres.COMERCIOS,
+        nombres.SEGURIDAD,
+        nombres.SALAS,
+        nombres.NATURALEZA,
+        nombres.CHETOS,
+        nombres.ONE,
     ]
     total = dado_subconjunto(features, df)
     result = dict()
@@ -62,16 +71,34 @@ def todos_los_subconjuntos(df):
 
 
 def experiment5(df):
-    df = filter_city(df, ciudades[0])
-    result = todos_los_subconjuntos(df)
+    for ciudad in ciudades:
+        tipos = ["Casa", "Apartamento"]
+        for tipo in tipos:
+            este = filter_city(df, ciudad)
+            este = este[este[nombres.TIPO_DE_PROPIEDAD] == tipo]
+            result = todos_los_subconjuntos(este)
 
-    xs = []
-    ys = []
-    for r in result:
-        # print(r, result[r])
-        xs.append(len(r))
-        ys.append(result[r])
+            xs = []
+            ys = []
+            best = []
+            nearest = 100000
+            res = 0
+            for r in result:
+                # print(r, result[r])
+                if result[r] < 25:
+                    xs.append(len(r))
+                    ys.append(result[r])
+                val = abs(len(r) + 1 - result[r])
+                if val < nearest:
+                    nearest = val
+                    best = r
+                    res = result[r]
 
-    plt.figure()
-    plt.scatter(x=xs, y=ys)
-    plt.show()
+            title = f'Cp {ciudad.nombre}, {tipo}'
+            print(title)
+            print(best, nearest, res)
+            plt.figure()
+            plt.scatter(x=xs, y=ys)
+            plt.plot(xs, np.array(xs)+1)
+            plt.savefig(f'images/{title}.png')
+            # plt.show()
